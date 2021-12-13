@@ -6,7 +6,7 @@ function get_initial_fish(input_file::String)
     line = split(lines[1], ",")
 
     # Initial number of fish
-    fish_num = map(x -> parse(Int64, x), line)
+    fish_num = map(x -> parse(Int128, x), line)
 
     return fish_num
 end
