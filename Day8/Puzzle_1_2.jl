@@ -46,80 +46,80 @@ end
 
 function get_digit_mapping(input_file::String)
 
+    unique_dict = Dict{Any,Any}("1" => 2, "4" => 4, "7" => 3, "8" => 7)
+
     all_signals = get_all_values(input_file, "signal")
 
-    # 1 -> cf (2 char), 4 -> bcdf (4 char)
-    # 7 -> acf (3 char), 8 -> abcdefg (7 char)
+    mapping_dict = Vector{Dict{Any,Any}}[]
 
-    unique_dict = [2, 4, 3, 7]
+    for i = 1:length(all_signals)
+
+        for signal in all_signals[i]
+
+            for (key,value) in unique_dict
+
+                if length(signal) == value
+                    mapping_dict[i][key] = signal
+                end
+            end
     
-end
+            # Pattern for 3
+            if length(signal) == 5 && issubset(mapping_dict[i]["1"], signal)
+                mapping_dict[i]["3"] = signal
+            end
 
-unique_dict = Dict{Any,Any}("1" => 2, "4" => 4, "7" => 3, "8" => 7)
+        end
 
-all_signals = get_all_values("Test_input_P1_p2.txt", "signal")
+    
 
-mapping_dict = Dict()
+        for signal in all_signals[i]
+            
+            # Pattern for 9
+            if length(signal) == 6 && issubset(mapping_dict[i]["3"], signal)
+                mapping_dict[i]["9"] = signal
+            end
 
-for signal in all_signals[1]
+        end
 
-    for (key,value) in unique_dict
-        if length(signal) == value
-            mapping_dict[key] = signal
+        for signal in all_signals[i]
+
+            # Pattern for 0
+            if length(signal) == 6 && issubset(mapping_dict[i]["7"], signal) && 
+                                    ~(signal in collect(values(mapping_dict[i])))
+
+                mapping_dict[i]["0"] = signal
+            end
+
+        end
+
+        for signal in all_signals[i]
+
+            # Pattern for 6
+            if length(signal) == 6 && ~(signal in collect(values(mapping_dict[i])))
+
+                mapping_dict[i]["6"] = signal
+            end
+
+        end
+
+        for signal in all_signals[i]
+
+            # Pattern for 5
+            if length(signal) == 5 && issubset(signal, mapping_dict[i]["6"])
+
+                mapping_dict[i]["5"] =  signal
+            end
+        end
+
+        for signal in all_signals[i]
+
+            # Pattern for 2
+            if length(signal) == 5 && ~(signal in collect(values(mapping_dict[i])))
+
+                mapping_dict[i]["2"] = signal
+            end
         end
     end
-    
-    # Pattern for 3
-    if length(signal) == 5 && issubset(mapping_dict["1"], signal)
-        mapping_dict["3"] = signal
-    end
+
+    return mapping_dict
 end
-
-for signal in all_signals[1]
-    
-    # Pattern for 9
-    if length(signal) == 6 && issubset(mapping_dict["3"], signal)
-        mapping_dict["9"] = signal
-    end
-
-end
-
-for signal in all_signals[1]
-
-    # Pattern for 0
-    if length(signal) == 6 && issubset(mapping_dict["7"], signal) && 
-                              ~(signal in collect(values(mapping_dict)))
-
-        mapping_dict["0"] = signal
-    end
-
-end
-
-for signal in all_signals[1]
-
-    # Pattern for 6
-    if length(signal) == 6 && ~(signal in collect(values(mapping_dict)))
-
-        mapping_dict["6"] = signal
-    end
-
-end
-
-for signal in all_signals[1]
-
-    # Pattern for 5
-    if length(signal) == 5 && issubset(signal, mapping_dict["6"])
-
-        mapping_dict["5"] =  signal
-    end
-end
-
-for signal in all_signals[1]
-
-    # Pattern for 2
-    if length(signal) == 5 && ~(signal in collect(values(mapping_dict)))
-
-        mapping_dict["2"] = signal
-    end
-end
-
