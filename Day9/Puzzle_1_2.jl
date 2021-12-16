@@ -103,5 +103,52 @@ function get_sum_of_risks(input_file::String)
         push!(risks, risk)
     end
 
-    return sum(risks)
+    return sum(risks), found_mins
+end
+
+# Part-2
+
+h = get_height_matrix("Test_input_P1_P2.txt")
+nrows, ncols = size(h)
+
+found_mins = get_sum_of_risks("Test_input_P1_P2.txt")[2]
+
+# Example low point
+start_point = found_mins[3]
+
+function get_basin_size(points, h::Matrix{Int64}, basin_size::Int64)
+
+    nrows, ncols = size(h)
+    basin_size_i = basin_size
+    
+    valid_locations = Any[]
+    
+    for start_point in points        
+
+        locations = get_adjacent_locations(start_point[1], start_point[2], nrows, ncols)
+
+        for loc in locations
+
+            if h[loc[1], loc[2]] != 9 && h[loc[1], loc[2]] > h[start_point[1], start_point[2]]
+
+                if isempty(valid_locations)
+                    basin_size += 1
+                    push!(valid_locations, loc)
+
+                else
+                    if ~(loc in valid_locations)
+                        basin_size += 1
+                        push!(valid_locations, loc)
+                    end
+                end              
+
+            end            
+        end
+    end
+
+    if basin_size == basin_size_i
+        return basin_size
+    else
+        return get_basin_size(valid_locations, h, basin_size)
+    end
 end
