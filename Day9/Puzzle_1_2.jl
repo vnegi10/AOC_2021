@@ -69,12 +69,39 @@ function get_adjacent_locations(r::Int64, c::Int64, nrows::Int64, ncols::Int64)
     return loc
 end
 
-h = get_height_matrix("Test_input_P1_P2.txt")
+function get_sum_of_risks(input_file::String)
 
+    h = get_height_matrix(input_file)
 
+    nrows, ncols = size(h)
+    found_mins = Any[]
 
+    for r = 1:nrows
+        for c = 1:ncols
+            loc = get_adjacent_locations(r, c, nrows, ncols)
+            mins = 0
 
+            for pos in loc
+                i, j = pos[1], pos[2]
+                if h[r, c] < h[i, j]
+                    mins += 1
+                end
+            end
 
+            # Low points should be lower than all adjacent points
+            if mins == length(loc)
+                push!(found_mins, [r, c])
+            end
+        end
+    end
 
+    risks = Int64[]
 
+    # Find elements at the low (minima) locations
+    for loc in found_mins
+        risk = h[loc[1], loc[2]] + 1
+        push!(risks, risk)
+    end
 
+    return sum(risks)
+end
