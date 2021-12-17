@@ -108,19 +108,11 @@ end
 
 # Part-2
 
-h = get_height_matrix("Test_input_P1_P2.txt")
-nrows, ncols = size(h)
-
-found_mins = get_sum_of_risks("Test_input_P1_P2.txt")[2]
-
-# Example low point
-start_point = found_mins[3]
-
-function get_basin_size(points, h::Matrix{Int64}, basin_size::Int64)
+function get_basin_size(points, h::Matrix{Int64}, basin_size::Int64, covered_locations)
 
     nrows, ncols = size(h)
     basin_size_i = basin_size
-    
+
     valid_locations = Any[]
     
     for start_point in points        
@@ -129,18 +121,15 @@ function get_basin_size(points, h::Matrix{Int64}, basin_size::Int64)
 
         for loc in locations
 
-            if h[loc[1], loc[2]] != 9 && h[loc[1], loc[2]] > h[start_point[1], start_point[2]]
-
-                if isempty(valid_locations)
+            if h[loc[1], loc[2]] != 9 && h[loc[1], loc[2]] > h[start_point[1], start_point[2]] 
+                                         
+                if ~(loc in covered_locations)
                     basin_size += 1
                     push!(valid_locations, loc)
-
-                else
-                    if ~(loc in valid_locations)
-                        basin_size += 1
-                        push!(valid_locations, loc)
-                    end
-                end              
+                end
+                
+                # Update counter for all covered locations                
+                push!(covered_locations, loc)
 
             end            
         end
@@ -149,6 +138,32 @@ function get_basin_size(points, h::Matrix{Int64}, basin_size::Int64)
     if basin_size == basin_size_i
         return basin_size
     else
-        return get_basin_size(valid_locations, h, basin_size)
+        return get_basin_size(valid_locations, h, basin_size, covered_locations)
     end
+end
+
+function get_largest_basins(input_file::String)
+
+    h = get_height_matrix(input_file)
+    found_mins = get_sum_of_risks(input_file)[2]
+
+    basin_sizes = Int64[]
+
+    for low_point in found_mins
+
+        basin_size = get_basin_size([(low_point[1], low_point[2])], h, 1, 
+                                    [(low_point[1], low_point[2])])
+        push!(basin_sizes, basin_size)
+
+    end
+
+    sort!(basin_sizes, rev = true)
+
+    final_size = 1
+
+    for i = 1:3
+        final_size *= basin_sizes[i]
+    end
+    
+    return final_size
 end
