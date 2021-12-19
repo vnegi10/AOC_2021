@@ -7,6 +7,7 @@ function get_incorrect_closing_char(input_file::String)
     # c1 -> (, c2 -> [, c3 -> {, c4 -> <
     index_dict = Dict(")" => 1, "]" => 2, "}" => 3, ">" => 4)
     closing_chars = [')', ']', '}', '>']
+    incorrect_chars = Any[]
 
     for (line_num, line) in enumerate(lines)
             
@@ -66,8 +67,9 @@ function get_incorrect_closing_char(input_file::String)
                         # of the chunk
                         if found == string(chunk[end])
 
-                            @info "Found first incorrect closing character $(found) in line $(line_num) within $(chunk)"
-                            found_chunk = true 
+                            #@info "Found first incorrect closing character $(found) in line $(line_num) within $(chunk)"
+                            found_chunk = true
+                            push!(incorrect_chars, found) 
                             break
                         end               
                     end
@@ -87,4 +89,21 @@ function get_incorrect_closing_char(input_file::String)
         end
         
     end
+
+    return incorrect_chars
 end
+
+function get_error_score(input_file::String)
+
+    incorrect_chars = get_incorrect_closing_char(input_file)
+
+    score_dict = Dict(")" => 3, "]" => 57, "}" => 1197, ">" => 25137)
+
+    score = 0
+
+    for incorrect_char in incorrect_chars
+        score += score_dict[incorrect_char]
+    end
+
+    return score
+end    
