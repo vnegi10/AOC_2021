@@ -3,92 +3,88 @@
 function get_incorrect_closing_char(input_file::String)
 
     lines = readlines(input_file)
-
+    
     # c1 -> (, c2 -> [, c3 -> {, c4 -> <
     index_dict = Dict(")" => 1, "]" => 2, "}" => 3, ">" => 4)
     closing_chars = [')', ']', '}', '>']
 
     for (line_num, line) in enumerate(lines)
-        
-        all_chars = collect(line)
-        incomplete = false
+            
+        start_index = 2
+        found_chunk = false
 
-        for closing_char in closing_chars            
-            if length(filter(x -> x == closing_char, all_chars)) == 0
-                incomplete = true
-                break
-            end
-        end
+        while start_index ≤ length(line)
 
-        if ~incomplete
+            for i = start_index:length(line)
 
-            start_index = 2
-            found_chunk = false
+                num_c = Int.(zeros(4))
 
-            while start_index ≤ length(line)
+                # Chunk always starts with an opening character
+                if line[start_index-1] in ['(', '[', '{', '<']
 
-                for i = start_index:length(line)
+                    chunk = ""
 
-                    num_c = Int.(zeros(4))
-
-                    # Chunk always starts with an opening character
-                    if line[start_index-1] in ['(', '[', '{', '<']
-
-                        # Scan chunk
-                        for j = start_index-1:i 
-                            
-                            if line[j]     == '('
-                                num_c[1] += 1
-                            elseif line[j] == '['
-                                num_c[2] += 1
-                            elseif line[j] == '{'
-                                num_c[3] += 1
-                            elseif line[j] == '<'
-                                num_c[4] += 1
-                            elseif line[j] == ')'
-                                num_c[1] -= 1
-                            elseif line[j] == ']'
-                                num_c[2] -= 1
-                            elseif line[j] == '}'
-                                num_c[3] -= 1
-                            elseif line[j] == '>'
-                                num_c[4] -= 1
-                            end
-
+                    # Scan chunk
+                    for j = start_index-1:i 
+                        
+                        if line[j]     == '('
+                            num_c[1] += 1
+                        elseif line[j] == '['
+                            num_c[2] += 1
+                        elseif line[j] == '{'
+                            num_c[3] += 1
+                        elseif line[j] == '<'
+                            num_c[4] += 1
+                        elseif line[j] == ')'
+                            num_c[1] -= 1
+                        elseif line[j] == ']'
+                            num_c[2] -= 1
+                        elseif line[j] == '}'
+                            num_c[3] -= 1
+                        elseif line[j] == '>'
+                            num_c[4] -= 1
                         end
 
-                        # Find incomplete chunk
-                        if length(filter(x -> x == 0, num_c)) == 2 && -1 ∈ num_c && 
-                            1 ∈ num_c && ~found_chunk
-
-                            closing_index = findfirst(isequal(-1), num_c)
-
-                            found = ""
-
-                            for (key, value) in index_dict
-                                if value == closing_index
-                                    found = key
-                                end
-                            end
-
-                            @info "Found first incorrect closing character $(found) in line $(line_num)"
-                            found_chunk = true 
-                            break               
-                        end
-
+                        chunk *= line[j]
                     end
 
-                    if found_chunk
-                        break
-                    end 
+                    # Find incomplete chunk
+                    if length(filter(x -> x == 0, num_c)) == 2 && -1 ∈ num_c && 
+                        1 ∈ num_c && ~found_chunk && chunk[end] in closing_chars
+
+                        closing_index = findfirst(isequal(-1), num_c)
+
+                        found = ""
+
+                        for (key, value) in index_dict
+                            if value == closing_index
+                                found = key
+                            end
+                        end
+
+                        # Line is corrupted only when incorrect closing character appears in the end
+                        # of the chunk
+                        if found == string(chunk[end])
+
+                            @info "Found first incorrect closing character $(found) in line $(line_num) within $(chunk)"
+                            found_chunk = true 
+                            break
+                        end               
+                    end
+
                 end
 
                 if found_chunk
                     break
-                end
-
-                start_index += 1
+                end 
             end
+
+            if found_chunk
+                break
+            end
+
+            start_index += 1
         end
+        
     end
 end
