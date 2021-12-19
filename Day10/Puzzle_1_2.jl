@@ -6,6 +6,8 @@ function get_incorrect_closing_char(input_file::String)
     
     # c1 -> (, c2 -> [, c3 -> {, c4 -> <
     index_dict = Dict(")" => 1, "]" => 2, "}" => 3, ">" => 4)
+    matching_dict = Dict(")" => "(", "]" => "[", "}" => "{", ">" => "<")
+
     closing_chars = [')', ']', '}', '>']
     incorrect_chars = Any[]
 
@@ -14,7 +16,7 @@ function get_incorrect_closing_char(input_file::String)
         start_index = 2
         found_chunk = false
 
-        while start_index ≤ length(line)
+        while start_index < length(line)
 
             for i = start_index:length(line)
 
@@ -49,6 +51,11 @@ function get_incorrect_closing_char(input_file::String)
                         chunk *= line[j]
                     end
 
+                    # Move start index ahead when a valid chunk is found
+                    if length(filter(x -> x == 0, num_c)) == 4
+                        start_index += length(chunk)
+                    end
+
                     # Find incomplete chunk
                     if length(filter(x -> x == 0, num_c)) == 2 && -1 ∈ num_c && 
                         1 ∈ num_c && ~found_chunk && chunk[end] in closing_chars
@@ -63,11 +70,12 @@ function get_incorrect_closing_char(input_file::String)
                             end
                         end
 
-                        # Line is corrupted only when incorrect closing character appears in the end
-                        # of the chunk
-                        if found == string(chunk[end])
+                        # Line is corrupted only when incorrect closing character appears at the end
+                        # of the chunk and does not match with the start of the chunk
+                        if found == string(chunk[end]) && 
+                           string(chunk[1]) != matching_dict[string(chunk[end])]
 
-                            #@info "Found first incorrect closing character $(found) in line $(line_num) within $(chunk)"
+                            @info "Found first incorrect closing character $(found) in line $(line_num) within $(chunk)"
                             found_chunk = true
                             push!(incorrect_chars, found) 
                             break
@@ -76,9 +84,9 @@ function get_incorrect_closing_char(input_file::String)
 
                 end
 
-                if found_chunk
+                #=if found_chunk
                     break
-                end 
+                end=# 
             end
 
             if found_chunk
