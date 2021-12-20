@@ -49,14 +49,10 @@ end
 
 # Part-2
 
-using Mmap
-
 function get_final_big_fish(input_file::String, days::Int64, day_split::Int64)
 
     fish_num_all = get_initial_fish(input_file)
     fish_total_all = Int128[]
-
-    #s = open("/mnt/sabrent/home/vikas/Desktop/Julia_mmap/fish_num.bin", "w+")
 
     # Initial calculation for full array up to day_split
     for day = 1:day_split
@@ -92,19 +88,12 @@ function get_final_big_fish(input_file::String, days::Int64, day_split::Int64)
                     push!(fish_num, Int8(8))
                 end
 
-            end
-
-            #@info "Calculating for day $(day) after split"
-            #write(s, fish_num)
+            end            
         end
 
         fish_total = length(Int128.(fish_num))
         push!(fish_total_all, fish_total)
     end
 
-    #close(s)
-
-    #fish_total = length(Int128.(fish_num))
-    
     return @info "After $(days) days, we will have $(sum(fish_total_all)) fish"
 end
