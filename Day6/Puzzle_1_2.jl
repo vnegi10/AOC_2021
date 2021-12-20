@@ -49,26 +49,62 @@ end
 
 # Part-2
 
-function get_final_big_fish(input_file::String, days::Int64)
+using Mmap
 
-    fish_num = get_initial_fish(input_file)
+function get_final_big_fish(input_file::String, days::Int64, day_split::Int64)
 
-    for day = 1:days
+    fish_num_all = get_initial_fish(input_file)
+    fish_total_all = BigInt[]
 
-        for i = 1:length(BigInt.(fish_num))
+    #s = open("/mnt/sabrent/home/vikas/Desktop/Julia_mmap/fish_num.bin", "w+")
 
-            if fish_num[i] != Int8(0)
-                fish_num[i] = fish_num[i] - Int8(1)
+    # Initial calculation for full array up to day_split
+    for day = 1:day_split
+
+        for i = 1:length(BigInt.(fish_num_all))
+
+            if fish_num_all[i] != Int8(0)
+                fish_num_all[i] = fish_num_all[i] - Int8(1)
             else
-                fish_num[i] = Int8(6)
-                push!(fish_num, Int8(8))
+                fish_num_all[i] = Int8(6)
+                push!(fish_num_all, Int8(8))
             end
 
         end
+
     end
 
-    fish_total = length(BigInt.(fish_num))
-    
-    return @info "After $(days) days, we will have $(fish_total) fish"
+    @info "Calculation up to $(day_split) is done, will split and continue"
 
+    for fish in fish_num_all
+
+        fish_num = Int8[]
+        push!(fish_num, fish)
+
+        for day = day_split+1:days
+
+            for i = 1:length(BigInt.(fish_num))
+
+                if fish_num[i] != Int8(0)
+                    fish_num[i] = fish_num[i] - Int8(1)
+                else
+                    fish_num[i] = Int8(6)
+                    push!(fish_num, Int8(8))
+                end
+
+            end
+
+            #@info "Calculating for day $(day) after split"
+            #write(s, fish_num)
+        end
+
+        fish_total = length(BigInt.(fish_num))
+        push!(fish_total_all, fish_total)
+    end
+
+    #close(s)
+
+    #fish_total = length(BigInt.(fish_num))
+    
+    return @info "After $(days) days, we will have $(sum(fish_total_all)) fish"
 end
