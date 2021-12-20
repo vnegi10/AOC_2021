@@ -9,6 +9,7 @@ function get_incorrect_closing_char(input_file::String)
     matching_dict = Dict(")" => "(", "]" => "[", "}" => "{", ">" => "<")
 
     closing_chars = [')', ']', '}', '>']
+    opening_chars = ['(', '[', '{', '<']
     incorrect_chars = Any[]
 
     for (line_num, line) in enumerate(lines)
@@ -23,7 +24,7 @@ function get_incorrect_closing_char(input_file::String)
                 num_c = Int.(zeros(4))
 
                 # Chunk always starts with an opening character
-                if line[start_index-1] in ['(', '[', '{', '<']
+                if line[start_index-1] in opening_chars
 
                     chunk = ""
 
@@ -52,8 +53,12 @@ function get_incorrect_closing_char(input_file::String)
                     end
 
                     # Move start index ahead when a valid chunk is found
-                    if length(filter(x -> x == 0, num_c)) == 4
+                    if length(filter(x -> x == 0, num_c)) == 4 &&
+                        chunk[end] in closing_chars &&
+                        string(chunk[1]) == matching_dict[string(chunk[end])]
+
                         start_index += length(chunk)
+                        
                     end
 
                     # Find incomplete chunk
