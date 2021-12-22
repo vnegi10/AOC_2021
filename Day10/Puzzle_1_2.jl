@@ -58,6 +58,7 @@ function get_incorrect_closing_char(input_file::String)
                         string(chunk[1]) == matching_dict[string(chunk[end])]
 
                         start_index += length(chunk)
+                        # @info "Found valid chunk $(chunk) in line $(line_num)"
                         
                     end
 

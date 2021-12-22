@@ -5,6 +5,15 @@ function get_path_connections(input_file::String)
 
     for line in lines
         parts = split(line, "-")
+
+        if isuppercase(parts[1][1])
+            parts[1], parts[2] = parts[2], parts[1]
+        end
+
+        if parts[2] == "start" || parts[1] == "end"
+            parts[1], parts[2] = parts[2], parts[1]
+        end
+
         push!(connections, [parts[1], parts[2]])
     end
 
