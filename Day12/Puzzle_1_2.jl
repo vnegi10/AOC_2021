@@ -1,6 +1,6 @@
 # Part-1
 
-using Combinatorics
+using Combinatorics, StatsBase
 
 function get_path_connections(input_file::String)
 
@@ -50,15 +50,90 @@ function get_all_paths(input_file::String)
 
                 for comb in combs
 
-                    perms = collect(permutations(comb))
+                    # Find how many small caves will be visited for this combination
+                    path = vcat(comb...)
+                    small_caves = String[]
 
-                    for perm in perms
+                    for i in range(start = 1, step = 2, stop = length(path) - 3)
 
-                        all_perms_combs = vcat(start_path, perm..., end_path)
-                        push!(all_paths, all_perms_combs)
+                        common = intersect(path[i:i + 1], path[i + 2:i + 3])
+                        if ~isempty(common) && islowercase(common[1][1])
+                            push!(small_caves, common[1])                
+                        end
 
                     end
+
+                    # Permutations only for valid paths (small caves visited only once)
+                    if isempty(small_caves) || length(small_caves) == length(unique(small_caves))
+                        
+                        # Optimize memory usage by permuting only a selected range every loop
+                        if length(comb) > 6
+                            num_perms = factorial(length(comb))
+                            
+                            @info "Optimizing for num_perms = $(num_perms)"
+                            perm_range = range(start = 1, stop = num_perms, length = 500)                            
+
+                            i = 1
+                            while i < length(perm_range)
+                                start_i = round(Int, perm_range[i])
+                                end_i   = round(Int, perm_range[i+1])
+                                perms = collect(permutations(comb))[start_i:end_i]
+
+                                # Check overlap for every permutation
+                                for perm in perms
+                                    
+                                    path = vcat(start_path, perm..., end_path)
+                                    overlap = true
+
+                                    for i in range(start = 1, step = 2, stop = length(path) - 3)
+
+                                        if isempty(intersect(path[i:i + 1], path[i + 2:i + 3]))
+                                            overlap = false
+                                            break
+                                        end
+
+                                    end
+
+                                    if overlap
+                                        push!(all_paths, path)
+                                    end        
+                                end
+                                i += 1
+                            end
+                        else
+                            perms = collect(permutations(comb))
+
+                            # Check overlap for every permutation
+                            for perm in perms
+
+                                path = vcat(start_path, perm..., end_path)
+                                overlap = true
+
+                                for i in range(start = 1, step = 2, stop = length(path) - 3)
+
+                                    if isempty(intersect(path[i:i + 1], path[i + 2:i + 3]))
+                                        overlap = false
+                                        break
+                                    end
+
+                                end
+
+                                if overlap
+                                    push!(all_paths, path)
+                                end    
+                            end   
+                        end                                     
+
+                    end
+                    
                 end
+            end
+
+            # There can also be direct paths from start to end
+            if ~isempty(intersect(start_path, end_path))
+
+                push!(all_paths, vcat(start_path, end_path))
+
             end
 
         end
@@ -67,7 +142,7 @@ function get_all_paths(input_file::String)
     return unique(all_paths)
 end
 
-function get_valid_paths(input_file::String)
+#=function get_valid_paths(input_file::String)
 
     all_paths = get_all_paths(input_file)
 
@@ -107,31 +182,31 @@ function get_valid_paths(input_file::String)
     end=#
 
     return unique(connected_paths)
-end
+end=#
 
 function get_final_paths(input_file::String)
 
-    valid_paths = get_valid_paths(input_file)
+    valid_paths = get_all_paths(input_file)
 
     final_paths = Any[]
 
     for path in valid_paths
 
-        small_caves = String[]
+        small_cave_check = true
 
-        for i in range(start = 1, step = 2, stop = length(path) - 3)
+        map_dict = countmap(path)
 
-            common = intersect(path[i:i + 1], path[i + 2:i + 3])
-            if islowercase(common[1][1])
-                push!(small_caves, common[1])                
+        for (key, value) in map_dict
+            if islowercase(key[1]) && value > 2
+                small_cave_check = false
             end
-
         end
 
-        if length(small_caves) == length(unique(small_caves))
+        if small_cave_check
             push!(final_paths, path)
         end
-    end
+        
+    end   
 
     return @info "Number of valid paths that visit small caves at most once = $(length(final_paths))"
 end
