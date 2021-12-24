@@ -48,41 +48,40 @@ function get_all_paths(input_file::String)
 
                 combs = collect(combinations(rest_paths, i))
 
-                for comb in combs
+                @inbounds for j in eachindex(combs)
 
                     # Find how many small caves will be visited for this combination
-                    path = vcat(comb...)
-                    small_caves = String[]
+                    path = vcat(combs[j]...)
+                    small_cave_check = true
 
-                    for i in range(start = 1, step = 2, stop = length(path) - 3)
+                    map_dict = countmap(path)
 
-                        common = intersect(path[i:i + 1], path[i + 2:i + 3])
-                        if ~isempty(common) && islowercase(common[1][1])
-                            push!(small_caves, common[1])                
+                    for (key, value) in map_dict
+                        if islowercase(key[1]) && value > 2
+                            small_cave_check = false
                         end
-
                     end
 
                     # Permutations only for valid paths (small caves visited only once)
-                    if isempty(small_caves) || length(small_caves) == length(unique(small_caves))
+                    if small_cave_check
                         
                         # Optimize memory usage by permuting only a selected range every loop
-                        if length(comb) > 6
-                            num_perms = factorial(length(comb))
+                        if length(combs[j]) > 10
+                            num_perms = factorial(length(combs[j]))
                             
                             @info "Optimizing for num_perms = $(num_perms)"
-                            perm_range = range(start = 1, stop = num_perms, length = 500)                            
+                            perm_range = range(start = 1, stop = num_perms, length = 25)                            
 
                             i = 1
                             while i < length(perm_range)
                                 start_i = round(Int, perm_range[i])
                                 end_i   = round(Int, perm_range[i+1])
-                                perms = collect(permutations(comb))[start_i:end_i]
+                                perms = collect(permutations(combs[j]))[start_i:end_i]
 
                                 # Check overlap for every permutation
-                                for perm in perms
+                                @inbounds for k in eachindex(perms)
                                     
-                                    path = vcat(start_path, perm..., end_path)
+                                    path = vcat(start_path, perms[k]..., end_path)
                                     overlap = true
 
                                     for i in range(start = 1, step = 2, stop = length(path) - 3)
@@ -101,12 +100,12 @@ function get_all_paths(input_file::String)
                                 i += 1
                             end
                         else
-                            perms = collect(permutations(comb))
+                            perms = collect(permutations(combs[j]))
 
                             # Check overlap for every permutation
-                            for perm in perms
+                            @inbounds for k in eachindex(perms)
 
-                                path = vcat(start_path, perm..., end_path)
+                                path = vcat(start_path, perms[k]..., end_path)
                                 overlap = true
 
                                 for i in range(start = 1, step = 2, stop = length(path) - 3)
@@ -208,5 +207,7 @@ function get_final_paths(input_file::String)
         
     end   
 
-    return @info "Number of valid paths that visit small caves at most once = $(length(final_paths))"
+    @info "Number of valid paths that visit small caves at most once = $(length(final_paths))"
+
+    return final_paths
 end
