@@ -255,25 +255,25 @@ function do_cave_check_2(paths, num_caves::Int64)
     for path in paths
         
         small_cave_check = true
-        twice_cave_check = false
+        found_twice_cave = false
 
         map_dict = countmap(path)
 
         for (key, value) in map_dict
-            if ~twice_cave_check && islowercase(key[1]) && value > num_caves
+            if ~found_twice_cave && islowercase(key[1]) && value > num_caves
 
-                twice_cave_check = true
+                found_twice_cave = true
                 delete!(map_dict, key)
             end
         end
 
         for (key, value) in map_dict
-            if twice_cave_check && islowercase(key[1]) && value > 2
+            if found_twice_cave && islowercase(key[1]) && value > 2
                 small_cave_check = false
             end 
         end
 
-        if small_cave_check && twice_cave_check
+        if small_cave_check && found_twice_cave
             push!(valid_paths, path)
         end
         
