@@ -24,7 +24,7 @@ function get_path_connections(input_file::String)
     return connections
 end
 
-function get_all_paths(input_file::String)
+function get_all_paths(input_file::String, num_caves::Int64)
 
     connections = get_path_connections(input_file)
 
@@ -57,7 +57,7 @@ function get_all_paths(input_file::String)
                     map_dict = countmap(path)
 
                     for (key, value) in map_dict
-                        if islowercase(key[1]) && value > 2
+                        if islowercase(key[1]) && value > num_caves
                             small_cave_check = false
                         end
                     end
@@ -168,7 +168,7 @@ end
 
 function get_final_paths(input_file::String)
 
-    valid_paths = do_cave_check(get_all_paths(input_file), 2)
+    valid_paths = do_cave_check(get_all_paths(input_file, 2), 2)
 
     # Generate unique path based on overlapping caves
     unique_paths = Any[]
@@ -224,4 +224,121 @@ function get_final_paths(input_file::String)
     return @info "Number of valid paths that visit small caves at most once = $(length(final_paths))"
 
     #return final_paths
+end
+
+# Part-2
+
+function do_cave_check_2(paths, num_caves::Int64)
+
+    valid_paths = Any[] 
+
+    # Case when every small cave is visited at most once    
+    for path in paths
+
+        small_cave_check = true
+
+        map_dict = countmap(path)
+
+        for (key, value) in map_dict
+            if islowercase(key[1]) && value > 2
+                small_cave_check = false
+            end
+        end
+
+        if small_cave_check
+            push!(valid_paths, path)
+        end
+        
+    end
+    
+    # Case when it's allowed to visit a single small cave twice
+    for path in paths
+        
+        small_cave_check = true
+        twice_cave_check = false
+
+        map_dict = countmap(path)
+
+        for (key, value) in map_dict
+            if ~twice_cave_check && islowercase(key[1]) && value > num_caves
+
+                twice_cave_check = true
+                delete!(map_dict, key)
+            end
+        end
+
+        for (key, value) in map_dict
+            if twice_cave_check && islowercase(key[1]) && value > 2
+                small_cave_check = false
+            end 
+        end
+
+        if small_cave_check && twice_cave_check
+            push!(valid_paths, path)
+        end
+        
+    end       
+
+    return valid_paths
+end
+
+function get_final_paths_2(input_file::String)
+
+    #valid_paths = do_cave_check_2(get_all_paths(input_file, 4), 2)
+    all_paths = get_all_paths(input_file, 4)
+
+    # Generate unique path based on overlapping caves
+    unique_paths = Any[]
+
+    for path in all_paths
+
+        unique_all = Any[]
+
+        for i in range(start = 1, step = 2, stop = length(path) - 3)
+
+            common = intersect(path[i:i + 1], path[i + 2:i + 3])
+
+            if isempty(unique_all) || common[1] != unique_all[end]
+                push!(unique_all, common)
+            end
+
+            f = filter(x -> x != common[1], path[i + 2:i + 3]) 
+            if f[1] != unique_all[end]
+                push!(unique_all, f)   
+            end   
+
+        end
+
+        push!(unique_paths, vcat("start", unique_all...))
+
+    end
+
+    # Remove duplicate caves appearing in succession
+    single_paths = Any[]
+    
+    for path in unique_paths
+
+        single_path = Any[]
+        i = 1
+        push!(single_path, path[i])
+
+        while i < length(path)
+            if path[i+1] != single_path[end]
+                push!(single_path, path[i+1])
+            end
+            i += 1
+        end
+
+        push!(single_paths, vcat(single_path...))
+
+    end
+    
+    unique!(single_paths)
+
+    # Remove paths where number of small caves > 1
+    final_paths = do_cave_check_2(single_paths, 2, 2)
+
+    @info "Number of valid paths that visit small caves at most once = $(length(final_paths))"
+
+    return final_paths
 end
