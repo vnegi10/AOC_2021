@@ -82,16 +82,18 @@ function grow_polymer_2(template::Vector{Char}, rules_dict::Dict{SubString{Strin
 
         #@info "Calculating polymer growth for step $(step)"
 
-        pol_inserts = Char[]
+        pol_inserts = Array{Char}(undef, length(template) - 1)
         pol_range = range(start = 1, stop = length(template) - 1, step = 1)
 
+        # Find what elements to insert based on matching pairs
         @inbounds for i in pol_range
 
             pol_pair = template[i] * template[i+1]
-            push!(pol_inserts, rules_dict[pol_pair])
+            pol_inserts[i] = rules_dict[pol_pair]
 
         end
 
+        # Create new template by using old one + inserting new elements
         template_new = Array{Char}(undef, length(template) + length(pol_inserts))
         k = 1
 
@@ -107,7 +109,7 @@ function grow_polymer_2(template::Vector{Char}, rules_dict::Dict{SubString{Strin
         end
 
         template = template_new
-        template_new = nothing        
+        template_new, pol_inserts = nothing, nothing        
     end
 
     return template
@@ -132,7 +134,7 @@ function get_final_result_2(input_file::String, steps::Int64)
 end
 
 function get_final_result_big(input_file::String, steps_initial::Int64, steps_total::Int64,
-                            pol_size::Int64)
+                              pol_size::Int64)
 
     template_in = get_template(input_file)
     rules_dict  = get_insertion_rules(input_file)
@@ -148,18 +150,20 @@ function get_final_result_big(input_file::String, steps_initial::Int64, steps_to
     for key in all_keys
         count_dict[key] = 0
     end
+
+    pol_full_size = length(template_out)
        
     @info "$(steps_initial) steps are done, will split and continue \
-           with polymer length $(length(template_out)) and segment size $(pol_size)"
+           with polymer length $(pol_full_size) and segment size $(pol_size)"
 
     i_start, num_segments = 1, 1
     last_pol = false
 
-    while i_start < length(template_out)
+    while i_start < pol_full_size
 
         # Check if we have reached the last polymer segment
-        if length(template_out) - i_start ≤ pol_size
-            i_end = length(template_out)
+        if pol_full_size - i_start ≤ pol_size
+            i_end = pol_full_size
             last_pol = true
 
         else
@@ -173,44 +177,63 @@ function get_final_result_big(input_file::String, steps_initial::Int64, steps_to
 
         @info "Segment # $(num_segments)"
 
-        # Calculate growth for each segment        
-        template_in = template_out[i_start:i_end]
+        @time begin
 
-        template_out_sub = grow_polymer_2(template_in, rules_dict, steps_total - steps_initial)
+            # Read from input file to create initial template, cleared later to save memory
+            # template_out = grow_polymer_2(get_template(input_file), rules_dict, steps_initial)
 
-        # Calculate occurences of each element
-        count_dict_sub = countmap(template_out_sub)
+            # Input template for each segment        
+            template_in = template_out[i_start:i_end]
 
-        for key in collect(keys(count_dict_sub))
-            count_dict[key] += count_dict_sub[key]
-        end
+            # Input template for common segment
+            if ~last_pol
+                template_in_common = template_out[i_end:i_end + 1]
+            end
 
-        # Stop at last polymer segment
-        if last_pol
-            break
-        end
+            # Save memory
+            # template_out = nothing
 
-        i_start = i_end + 1
-        num_segments += 1        
+            template_out_sub = grow_polymer_2(template_in, rules_dict, steps_total - steps_initial)
 
-        # Calculate growth for common elements between two segments
-        template_in = template_out[i_end:i_start]
+            # Calculate occurences of each element
+            count_dict_sub = countmap(template_out_sub)
 
-        template_out_sub = grow_polymer_2(template_in, rules_dict, steps_total - steps_initial)
+            for key in collect(keys(count_dict_sub))
+                count_dict[key] += count_dict_sub[key]
+            end
 
-        # Remove first element
-        popat!(template_out_sub, 1)
+            # Save memory
+            template_out_sub = nothing
 
-        # Remove last element only when not at the end of polymer sequence
-        if i_start != length(template_out)
-            popat!(template_out_sub, length(template_out_sub))
-        end    
+            # Stop at last polymer segment
+            if last_pol
+                break
+            end
 
-        count_dict_sub = countmap(template_out_sub)
+            i_start = i_end + 1
+            num_segments += 1
+            
+            # Calculate growth for common elements between two segments
+            template_out_sub = grow_polymer_2(template_in_common, rules_dict, steps_total - steps_initial)
 
-        for key in collect(keys(count_dict_sub))
-            count_dict[key] += count_dict_sub[key]
-        end
+            # Remove first element
+            popat!(template_out_sub, 1)
+
+            # Remove last element only when not at the end of polymer sequence
+            if i_start != pol_full_size
+                popat!(template_out_sub, length(template_out_sub))
+            end    
+
+            count_dict_sub = countmap(template_out_sub)
+
+            for key in collect(keys(count_dict_sub))
+                count_dict[key] += count_dict_sub[key]
+            end
+            
+            # Save memory
+            template_out_sub = nothing
+
+        end        
 
     end
     
