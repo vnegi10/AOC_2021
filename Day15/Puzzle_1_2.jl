@@ -71,8 +71,8 @@ function get_adjacent_locations(r::Int64, c::Int64, nrows::Int64, ncols::Int64)
     return loc
 end
 
-function get_all_risks(r::Matrix{Int64}, output_file::String, source, 
-                       target, visited_locations, path_locations)
+function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int32}, source, target, 
+                      visited_locations, path_locations)
 
     nrows, ncols = size(r)
 
@@ -85,11 +85,13 @@ function get_all_risks(r::Matrix{Int64}, output_file::String, source,
             push!(path, r[pos[1], pos[2]])
         end
 
-        open(output_file, "a") do file
+        #=open(output_file, "a") do file
             writedlm(file, sum(path))
-        end
+        end=#
 
         #println(sum(path))
+
+        push!(sum_paths, Int32(sum(path)))
         return 
     end
     
@@ -106,14 +108,14 @@ function get_all_risks(r::Matrix{Int64}, output_file::String, source,
         push!(path_locations, loc)
         push!(visited_locations, loc)
 
-        get_all_risks(r, output_file, loc, target, visited_locations, path_locations)
+        get_all_risks(r, sum_paths, loc, target, visited_locations, path_locations)
 
         filter!(x -> x != loc, visited_locations)
         popat!(path_locations, length(path_locations))
     end
 end
 
-function get_lowest_risk(input_file::String, output_file::String)
+function get_lowest_risk(input_file::String)
 
     # Start at top left
     source = (1, 1)
@@ -127,13 +129,15 @@ function get_lowest_risk(input_file::String, output_file::String)
     visited_locations = [(1,1)]
     path_locations    = [(1,1)]
 
-    get_all_risks(r, output_file, source, target, visited_locations, path_locations)
+    sum_paths = Int32[]
 
-    lines = readlines(output_file)
+    get_all_risks(r, sum_paths, source, target, visited_locations, path_locations)
+
+    #=lines = readlines(output_file)
     lines = map(x -> parse(Int64, x), lines)
 
     # Delete file
-    rm(output_file)
+    rm(output_file)=#
 
-    return @info "Lowest total risk is $(minimum(lines))"
+    return @info "Lowest total risk is $(minimum(sum_paths))"
 end
