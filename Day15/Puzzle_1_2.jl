@@ -1,7 +1,5 @@
 # Part-1
 
-using DelimitedFiles
-
 function get_risk_matrix(input_file::String)
 
     lines = readlines(input_file)
@@ -71,12 +69,12 @@ function get_adjacent_locations(r::Int64, c::Int64, nrows::Int64, ncols::Int64)
     return loc
 end
 
-function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int32}, source, target, 
-                      visited_locations, path_locations)
+function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source, 
+                       target, visited_locations, path_locations)
 
     nrows, ncols = size(r)
-
-    # Terminate search when target is reached and print path
+    
+    # Terminate search when target is reached and show minimum
     if source == target
 
         path = Int64[]
@@ -85,13 +83,25 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int32}, source, targe
             push!(path, r[pos[1], pos[2]])
         end
 
-        #=open(output_file, "a") do file
-            writedlm(file, sum(path))
+        if isempty(sum_paths)
+            push!(sum_paths, sum(path))
+        end
+
+        if sum(path) < sum_paths[1]
+            sum_paths[1] = sum(path)
+        end
+
+        # Counter for total paths
+        #=push!(num_paths, Int8(1))
+
+        total_paths = length(num_paths)
+
+        if total_paths > typemax(Int64)
+            total_paths = length(Int128.(num_paths))
         end=#
 
-        #println(sum(path))
-
-        push!(sum_paths, Int32(sum(path)))
+        @info "Current lowest total risk = $(sum_paths[1])"
+        
         return 
     end
     
@@ -129,8 +139,8 @@ function get_lowest_risk(input_file::String)
     visited_locations = [(1,1)]
     path_locations    = [(1,1)]
 
-    sum_paths = Int32[]
-
+    sum_paths = Int64[]
+    
     get_all_risks(r, sum_paths, source, target, visited_locations, path_locations)
 
     #=lines = readlines(output_file)
@@ -139,5 +149,5 @@ function get_lowest_risk(input_file::String)
     # Delete file
     rm(output_file)=#
 
-    return @info "Lowest total risk is $(minimum(sum_paths))"
+    return @info "Lowest total risk found = $(sum_paths[1])"
 end
