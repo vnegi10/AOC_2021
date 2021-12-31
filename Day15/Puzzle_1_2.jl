@@ -91,6 +91,8 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source,
             sum_paths[1] = sum(path)
         end
 
+        #println(path)
+
         # Counter for total paths
         #=push!(num_paths, Int8(1))
 
@@ -100,7 +102,7 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source,
             total_paths = length(Int128.(num_paths))
         end=#
 
-        @info "Current lowest total risk = $(sum_paths[1])"
+        #@info "Current lowest total risk = $(sum_paths[1])"
         
         return 
     end
@@ -113,6 +115,19 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source,
     for loc in locations
         if loc in visited_locations
             continue
+        end
+
+        # Check if sum of risks in current path is > previous path
+        if ~isempty(sum_paths)
+            path = Int64[]
+
+            for pos in path_locations[2:end]
+                push!(path, r[pos[1], pos[2]])
+            end
+
+            if sum(path) ≥ sum_paths[1]
+                continue
+            end
         end
 
         push!(path_locations, loc)
