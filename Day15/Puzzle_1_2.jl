@@ -77,10 +77,11 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source,
     # Terminate search when target is reached and show minimum
     if source == target
 
-        path = Int64[]
+        path = Array{Int64}(undef, length(path_locations) - 1)
 
-        for pos in path_locations[2:end]
-            push!(path, r[pos[1], pos[2]])
+        for i in eachindex(path)
+            pos = path_locations[i+1]
+            path[i] = r[pos[1], pos[2]]
         end
 
         if isempty(sum_paths)
@@ -92,16 +93,6 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source,
         end
 
         #println(path)
-
-        # Counter for total paths
-        #=push!(num_paths, Int8(1))
-
-        total_paths = length(num_paths)
-
-        if total_paths > typemax(Int64)
-            total_paths = length(Int128.(num_paths))
-        end=#
-
         #@info "Current lowest total risk = $(sum_paths[1])"
         
         return 
@@ -117,12 +108,13 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source,
             continue
         end
 
-        # Check if sum of risks in current path is > previous path
+        # Check if sum of risks in current path is ≥ previous path
         if ~isempty(sum_paths)
-            path = Int64[]
+            path = Array{Int64}(undef, length(path_locations) - 1)
 
-            for pos in path_locations[2:end]
-                push!(path, r[pos[1], pos[2]])
+            for i in eachindex(path)
+                pos = path_locations[i+1]
+                path[i] = r[pos[1], pos[2]]
             end
 
             if sum(path) ≥ sum_paths[1]
@@ -135,7 +127,7 @@ function get_all_risks(r::Matrix{Int64}, sum_paths::Vector{Int64}, source,
 
         get_all_risks(r, sum_paths, loc, target, visited_locations, path_locations)
 
-        filter!(x -> x != loc, visited_locations)
+        popat!(visited_locations, length(visited_locations))
         popat!(path_locations, length(path_locations))
     end
 end
@@ -157,12 +149,6 @@ function get_lowest_risk(input_file::String)
     sum_paths = Int64[]
     
     get_all_risks(r, sum_paths, source, target, visited_locations, path_locations)
-
-    #=lines = readlines(output_file)
-    lines = map(x -> parse(Int64, x), lines)
-
-    # Delete file
-    rm(output_file)=#
 
     return @info "Lowest total risk found = $(sum_paths[1])"
 end
