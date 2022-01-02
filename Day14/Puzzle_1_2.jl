@@ -85,13 +85,11 @@ function grow_polymer_2(template::Vector{Char}, rules_dict::Dict{SubString{Strin
         #@info "Calculating polymer growth for step $(step)"
 
         pol_inserts = Array{Char}(undef, length(template) - 1)
-        pol_range = range(start = 1, stop = length(template) - 1, step = 1)
-
+                
         # Find what elements to insert based on matching pairs
-        @inbounds for i in pol_range
+        @inbounds for i in eachindex(pol_inserts)
 
-            pol_pair = template[i] * template[i+1]
-            pol_inserts[i] = rules_dict[pol_pair]
+            pol_inserts[i] = rules_dict[template[i] * template[i+1]]
 
         end
 
@@ -125,7 +123,7 @@ function grow_polymer_2_mmap(template::Vector{Char}, rules_dict::Dict{SubString{
 
     for step = 1:steps
 
-        @info "Calculating polymer growth for step $(step)"
+        #@info "Calculating polymer growth for step $(step)"
         
         insert_io   = open(joinpath(mmap_dir, mmap_filenames[1]), "w+")
         template_io = open(joinpath(mmap_dir, mmap_filenames[2]), "w+")
@@ -415,14 +413,16 @@ function get_final_result_big_mmap(input_file::String, steps_initial::Int64, ste
             # Save memory
             # template_out = nothing
 
-            pol_output_sub = grow_polymer_2_mmap(template_in, rules_dict, steps_total - steps_initial, 
+            template_out_sub = grow_polymer_2(template_in, rules_dict, steps_total - steps_initial)
+
+            #=pol_output_sub = grow_polymer_2_mmap(template_in, rules_dict, steps_total - steps_initial, 
                                                 ["insert_2.bin", "template_2.bin"])
 
             template_mmap_file = pol_output_sub[1]
             template_length    = pol_output_sub[2]
         
             template_io_sub  = open(template_mmap_file, "r+")
-            template_out_sub = Mmap.mmap(template_io_sub, Vector{Char}, template_length)
+            template_out_sub = Mmap.mmap(template_io_sub, Vector{Char}, template_length)=#
 
             # Calculate occurences of each element
             count_dict_sub = countmap(template_out_sub)
@@ -463,8 +463,8 @@ function get_final_result_big_mmap(input_file::String, steps_initial::Int64, ste
             template_out_sub = nothing
 
             # Close IO stream and remove mmap file
-            close(template_io_sub)
-            rm(template_mmap_file)
+            #=close(template_io_sub)
+            rm(template_mmap_file)=#
 
         end    
 
