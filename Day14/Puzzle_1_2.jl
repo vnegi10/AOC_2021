@@ -84,23 +84,15 @@ function grow_polymer_2(template::Vector{Char}, rules_dict::Dict{SubString{Strin
 
         #@info "Calculating polymer growth for step $(step)"
 
-        pol_inserts = Array{Char}(undef, length(template) - 1)
-                
-        # Find what elements to insert based on matching pairs
-        @inbounds for i in eachindex(pol_inserts)
-
-            pol_inserts[i] = rules_dict[template[i] * template[i+1]]
-
-        end
-
         # Create new template by using old one + inserting new elements
-        template_new = Array{Char}(undef, length(template) + length(pol_inserts))
+        template_new = Array{Char}(undef, 2*length(template) - 1)
         k = 1
 
         @inbounds for j in eachindex(template_new)
 
             if iseven(j)
-                template_new[j] = pol_inserts[Int(j/2)]
+                template_new[j] = rules_dict[template[Int(j/2)] * template[Int(j/2) + 1]]
+
             else
                 template_new[j] = template[k]
                 k += 1 
@@ -109,14 +101,14 @@ function grow_polymer_2(template::Vector{Char}, rules_dict::Dict{SubString{Strin
         end
 
         template = template_new
-        template_new, pol_inserts = nothing, nothing        
+        template_new = nothing        
     end
 
     return template
 end
 
 function grow_polymer_2_mmap(template::Vector{Char}, rules_dict::Dict{SubString{String}, Char},
-                           steps::Int64, mmap_filenames::Vector{String})
+                           steps::Int64, mmap_filename::String)
 
     mmap_dir = "/mnt/sabrent/home/vikas/Desktop/Julia_mmap"
     template_length = 0
@@ -125,29 +117,17 @@ function grow_polymer_2_mmap(template::Vector{Char}, rules_dict::Dict{SubString{
 
         #@info "Calculating polymer growth for step $(step)"
         
-        insert_io   = open(joinpath(mmap_dir, mmap_filenames[1]), "w+")
-        template_io = open(joinpath(mmap_dir, mmap_filenames[2]), "w+")
-
-        pol_inserts = Mmap.mmap(insert_io, Vector{Char}, length(template) - 1)
-        pol_range = range(start = 1, stop = length(template) - 1, step = 1)
-
-        # Find what elements to insert based on matching pairs
-        @inbounds for i in pol_range
-
-            pol_pair = template[i] * template[i+1]
-            pol_inserts[i] = rules_dict[pol_pair]
-
-        end
+        template_io = open(joinpath(mmap_dir, mmap_filename), "w+")
 
         # Create new template by using old one + inserting new elements
-        template_length = length(template) + length(pol_inserts)
+        template_length = 2*length(template) - 1
         template_new = Mmap.mmap(template_io, Vector{Char}, template_length)
         k = 1
 
         @inbounds for j in eachindex(template_new)
 
             if iseven(j)
-                template_new[j] = pol_inserts[Int(j/2)]
+                template_new[j] = rules_dict[template[Int(j/2)] * template[Int(j/2) + 1]]
             else
                 template_new[j] = template[k]
                 k += 1 
@@ -156,32 +136,24 @@ function grow_polymer_2_mmap(template::Vector{Char}, rules_dict::Dict{SubString{
         end
 
         template = template_new
-        template_new, pol_inserts = nothing, nothing
+        template_new = nothing
 
         # Close IO
-        close(insert_io)
         close(template_io)
 
         # Remove mmap files for all iterations except the last one
         if step != steps
-
-            rm(joinpath(mmap_dir, mmap_filenames[1]))
-            rm(joinpath(mmap_dir, mmap_filenames[2]))
-
+            rm(joinpath(mmap_dir, mmap_filename))            
         else
-
             # Force synchronization between in-memory and on-disk version
-            Mmap.sync!(template)
-
-            # Remove only the pol_inserts mmap file
-            rm(joinpath(mmap_dir, mmap_filenames[1]))
+            Mmap.sync!(template)            
         end
     end
 
     template = nothing
 
     # Return full path to template mmap file and its length
-    return joinpath(mmap_dir, mmap_filenames[2]), template_length
+    return joinpath(mmap_dir, mmap_filename), template_length
 end
 
 function get_final_result_2(input_file::String, steps::Int64)
@@ -347,20 +319,29 @@ function get_final_result_big(input_file::String, steps_initial::Int64, steps_to
 end
 
 function get_final_result_big_mmap(input_file::String, steps_initial::Int64, steps_total::Int64,
-                              pol_size::Int64)
+                                   pol_size::Int64; mmap_filename = "dummy.bin", mmap_length = 0)
 
-    template_in = get_template(input_file)
+    mmap_dir = "/mnt/sabrent/home/vikas/Desktop/Julia_mmap"
+
     rules_dict  = get_insertion_rules(input_file)
+    template_out = Vector{Char}[]
 
-    # Polymer growth until steps_initial
-    pol_output = grow_polymer_2_mmap(template_in, rules_dict, steps_initial, 
-                                    ["insert_1.bin", "template_1.bin"])
-    
-    template_mmap_file = pol_output[1]
-    template_length    = pol_output[2]
+    if ~isfile(joinpath(mmap_dir, mmap_filename))
 
-    template_io  = open(template_mmap_file, "r+")
-    template_out = Mmap.mmap(template_io, Vector{Char}, template_length)    
+        template_in = get_template(input_file)
+        
+        # Polymer growth until steps_initial
+        pol_output = grow_polymer_2_mmap(template_in, rules_dict, steps_initial, mmap_filename)
+        
+        template_mmap_file = pol_output[1]
+        template_length    = pol_output[2]
+
+        template_io  = open(template_mmap_file, "r+")
+        template_out = Mmap.mmap(template_io, Vector{Char}, template_length)         
+    else
+        template_io  = open(joinpath(mmap_dir, mmap_filename), "r+")
+        template_out = Mmap.mmap(template_io, Vector{Char}, mmap_length)         
+    end
 
     # Create a dict to keep track of number of elements
     count_dict = countmap(template_out)
@@ -399,9 +380,6 @@ function get_final_result_big_mmap(input_file::String, steps_initial::Int64, ste
 
         @time begin
 
-            # Read from input file to create initial template, cleared later to save memory
-            # template_out = grow_polymer_2(get_template(input_file), rules_dict, steps_initial)
-
             # Input template for each segment        
             template_in = template_out[i_start:i_end]
 
@@ -409,9 +387,6 @@ function get_final_result_big_mmap(input_file::String, steps_initial::Int64, ste
             if ~last_pol
                 template_in_common = template_out[i_end:i_end + 1]
             end
-
-            # Save memory
-            # template_out = nothing
 
             template_out_sub = grow_polymer_2(template_in, rules_dict, steps_total - steps_initial)
 
